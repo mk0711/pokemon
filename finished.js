@@ -1,10 +1,21 @@
 'use strict';
-const filters = {
-  legendary: ['True', 'False'],
-  generations: 0,
+
+
+const COL = {
+    NAME: 'Name',
+    TYPE1: 'Type 1',
+    TYPE2: 'Type 2',
+    TOTAL: 'Total',
+    SP_DEF: 'Sp. Def',
+    GEN: 'Generation',
+    LGD: 'Legendary',
 };
 
-(function() {
+const FILTERS = {
+    LGD: ['True', 'False'],
+    GEN: 0,
+};
+
   let colors2 = {
     "Bug": "#4E79A7",
     "Dark": "#A0CBE8",
@@ -26,13 +37,28 @@ const filters = {
   let data = "no data";
   let svgContainer = ""; 
  
-  window.onload = function() {
-    svgContainer = d3.select('body')
+  function visualize(data) {
+    svgContainer = d3.select('#graph')
       .append('svg')
       .attr('width', 500)
       .attr('height', 500);
-    d3.csv("data/pokemon.csv")
-      .then((data) => makeScatterPlot(data));
+    
+      makeScatterPlot(data);
+
+      let legendaryDropDown = createLegendaryFilter(['All', 'True', 'False']);
+      legendaryDropDown.on('change', function() {
+          FILTERS.LGD = (this.value == 'All') ? ['True', 'False'] : [this.value];
+          showCircles(svgContainer, data);
+      });
+  
+      let generationDropdown = createGenerationFilter(data);
+      generationDropdown.on('change', function() {
+          FILTERS.GEN = parseInt(this.value);
+          showCircles(svgContainer, data);
+      });
+
+      createType1Legend(data);
+      showCircles(svgContainer, data);
   }
 
   function makeScatterPlot(csvData) {
@@ -42,22 +68,85 @@ const filters = {
     let axesLimits = findMinMax(df_data, total_data);
     let mapFunctions = drawAxes(axesLimits, "Sp. Def", "Total");
     plotData(mapFunctions);
-    makeLabels();
-    const legendaryfilters = createLegendaryFilter(['All', 'True', 'False']);
-    legendaryfilters.on('change', function() {
-        filters.legendary = (this.value == 'All') ? ['True', 'False'] : [this.value];
-        showCircles(svg, data);
-    });
+    makeLabels();;
+  };
 
-    const generationDropdown = createGenerationFilter(data);
-    generationDropdown.on('change', function() {
-        filters.legendary = parseInt(this.value);
-        showCircles(svg, data);
-    });
 
-    createType1Legend(data);
-    showCircles(svg, data);
-  }
+function createLegendaryFilter(choices) {
+  let dropdown = d3.select('#legendary-filter')
+      .append('select')
+      .attr('name', 'legendary');
+
+  let options = dropdown.selectAll('option')
+      .data(choices)
+      .enter()
+      .append('option')
+      .text(d => d)
+      .attr('value', d => d);
+  
+  options.filter(val => val == choices[0]).attr('selected', true);
+  return dropdown;
+};
+
+function createGenerationFilter(data) {
+  let dropdown = d3.select('#generation-filter')
+      .append('select')
+      .attr('name', 'generation');
+
+  let distinctGens = [0, ...new Set(data.map(d => d[COL.GEN]))];
+
+  let options = dropdown.selectAll('option')
+      .data(distinctGens)
+      .enter()
+      .append('option')
+      .text(d => d)
+      .attr('value', d => d);
+  
+  options.filter(val => val == data[0]).attr('selected', true);
+  return dropdown;
+};
+
+function createType1Legend(data) {
+  let types = Object.keys(colors2);
+  types = types.map(t => {
+      return {
+          name: t,
+          color: colors2[t],
+      };
+  });
+
+  const typeDivs = d3.select('#type1-legend')
+      .selectAll('div')
+      .data(types)
+      .enter()
+      .append('div')
+      .attr('id', t => `${t.name}-type`);
+
+  typeDivs.append('div')
+      .style('background-color', t => t.color)
+      .attr('class', 'type-legend-color');
+
+  typeDivs.append('span')
+      .text(t => t.name);
+};
+
+function showCircles (svgContainer, data) {
+  const isValid = d => {
+      if (FILTERS.GEN && d[COL.GEN] != FILTERS.GEN) 
+      return false;
+      return FILTERS.LGD.includes(d[COL.LGD]);
+  };
+
+  svgContainer.selectAll('.circles')
+      .data(data)
+      .filter(d => !isValid(d))
+      .attr('display', 'none');
+
+  svgContainer.selectAll('.circles')
+      .data(data)
+      .filter(d => isValid(d))
+      .attr('display', 'inline');
+};
 
   function makeLabels() {
     svgContainer.append('text')
@@ -116,83 +205,7 @@ const filters = {
         });
   }
 
-  function createLegendaryFilter(choices){
-    const dropdown = d3.select('#legendary-filter')
-        .append('select')
-        .attr('name', 'legendary');
-
-    const options = dropdown.selectAll('option')
-        .data(choices)
-        .enter()
-        .append('option')
-        .text(d => d)
-        .attr('value', d => d);
-    
-    options.filter(val => val == choices[0]).attr('selected', true);
-    return dropdown;
-};
-
-function createGenerationFilter(data) {
-    const dropdown = d3.select('#generation-filter')
-        .append('select')
-        .attr('name', 'generation');
-
-    const distinctGens = [0, ...new Set(data.map(d => d["Generation"]))];
-
-    const options = dropdown.selectAll('option')
-        .data(distinctGens)
-        .enter()
-        .append('option')
-        .text(d => d)
-        .attr('value', d => d);
-    
-    options.filter(val => val == data[0]).attr('selected', true);
-    return dropdown;
-};
-
-function createType1Legend(data) {
-    let types = Object.keys(colors2);
-    types = types.map(t => {
-        return {
-            name: t,
-            color: colors2[t],
-        };
-    });
-
-    const typeDivs = d3.select('#type1-legend')
-        .selectAll('div')
-        .data(types)
-        .enter()
-        .append('div')
-        .attr('id', t => `${t.name}-type`);
-
-    typeDivs.append('div')
-        .style('background-color', t => t.color)
-        .attr('class', 'type-legend-color');
-
-    typeDivs.append('span')
-        .text(t => t.name);
-};
-
-function showCircles(svg, data) {
-    const isValid = d => {
-        if (filters.generations && d["Generation"] != filters.generations) return false;
-        return filteres.legendary.includes(d["Legendary"]);
-    };
-
-    svg.selectAll('.circles')
-        .data(data)
-        .filter(d => !isValid(d))
-        .attr('display', 'none');
-
-    svg.selectAll('.circles')
-        .data(data)
-        .filter(d => isValid(d))
-        .attr('display', 'inline');
-};
-
-
-  function drawAxes(limits, x, y) {
+function drawAxes(limits, x, y) {
     let xValue = function(d) { return +d[x]; }
     let xScale = d3.scaleLinear()
       .domain([0, limits.xMax + 10]) 
@@ -234,5 +247,6 @@ function showCircles(svg, data) {
       yMin : yMin,
       yMax : yMax
     }
-  }
-})();
+  };
+
+d3.csv('./data/pokemon.csv').then(visualize);
