@@ -256,5 +256,4 @@ function hideTooltip (d, div, chart) {
         .style('opacity', 0);
 };
 
-
 d3.csv('./data/pokemon.csv').then(visualize);
