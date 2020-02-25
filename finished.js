@@ -66,7 +66,6 @@ function visualize (data) {
     showCircles(svg, data);
 }
 
-
 function makeScatterPlot (data, svg) {
     let yData = data.map(d => parseFloat(d[Y_VAR]));
     let xData = data.map(d => parseFloat(d[X_VAR]));
@@ -242,8 +241,8 @@ function showTooltip (d, div, chart) {
         <strong>${d[COL.NAME]}</strong>
         <br/>
         <em>${d[COL.TYPE1]}</em>
-        ${d[COL.TYPE2] ? ['<br/><em>', d[COL.TYPE2], '</em>'].join('') : ''}
-    `;
+        ${d[COL.TYPE2] ? ['<br/><em>', d[COL.TYPE2], '</em>'].join('') : ''}`
+    ;
 
     div.html(info)
         .style('left', (d3.event.pageX) + 'px')
@@ -255,6 +254,5 @@ function hideTooltip (d, div, chart) {
         .duration(500)
         .style('opacity', 0);
 };
-
 
 d3.csv('./data/pokemon.csv').then(visualize);
